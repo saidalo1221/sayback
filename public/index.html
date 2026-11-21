@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="description" content="Record an IELTS speaking answer and review a Whisper transcript with audible fillers, repetitions, and timed pauses.">
+  <title>Sayback · IELTS Speaking Studio</title>
+  <link rel="icon" href="/assets/favicon.png" type="image/png">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/studio.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-width header-content">
+      <a class="brand" href="/" aria-label="Sayback home">
+        <span class="brand-icon"><i class="ph ph-waveform" aria-hidden="true"></i></span>
+        <span>sayback<span class="brand-period">.</span></span>
+      </a>
+      <div class="header-actions">
+        <span class="privacy"><i class="ph ph-lock-key" aria-hidden="true"></i> Runs on your device</span>
+        <button class="button quiet" id="help-open" type="button"><i class="ph ph-question" aria-hidden="true"></i> <span>How it works</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="site-width">
+    <section class="intro" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">IELTS SPEAKING STUDIO</p>
+        <h1 id="page-title">Say it out loud<span>.</span></h1>
+        <p class="intro-description">Record an answer, see where you hesitate, and take your transcript to ChatGPT for feedback.</p>
+      </div>
+      <div class="engine-tag"><i class="ph ph-waveform" aria-hidden="true"></i><span>Whisper</span><span class="engine-divider" aria-hidden="true"></span><span>English</span></div>
+    </section>
+
+    <div class="workspace">
+      <section class="panel studio-panel" id="recorder-panel" aria-labelledby="recorder-title">
+        <div class="panel-heading">
+          <span class="heading-icon"><i class="ph ph-microphone" aria-hidden="true"></i></span>
+          <div>
+            <h2 id="recorder-title">Recorder</h2>
+            <p>Use your mic or upload a voice message.</p>
+          </div>
+        </div>
+
+        <div class="recording-display" id="recording-display" data-mode="idle">
+          <canvas id="waveform" aria-hidden="true"></canvas>
+          <div class="recording-topline">
+            <span class="recording-state" id="recording-state"><span class="state-dot"></span><span id="recording-label">Ready to record</span></span>
+            <i class="ph ph-waveform recording-icon" aria-hidden="true"></i>
+          </div>
+          <div class="recording-bottomline">
+            <span class="timer" id="recording-time" aria-label="Recording duration">00:00</span>
+            <span class="recording-caption" id="recording-caption">MIC INPUT</span>
+          </div>
+        </div>
+
+        <div class="audio-controls" id="audio-controls" hidden>
+          <button class="button icon-button audio-play" id="play-button" type="button" aria-label="Play audio" title="Play audio"><i class="ph ph-play" aria-hidden="true"></i></button>
+          <span class="audio-time" id="playback-time">00:00</span>
+          <input id="seek" type="range" min="0" max="0" step="0.01" value="0" aria-label="Audio position">
+          <button class="button icon-button" id="download-audio" type="button" aria-label="Download original audio" title="Download original audio"><i class="ph ph-download-simple" aria-hidden="true"></i></button>
+          <audio id="audio" preload="metadata" hidden></audio>
+        </div>
+
+        <div class="recorder-actions">
+          <button class="button primary" id="record" type="button"><i class="ph ph-microphone" aria-hidden="true"></i><span>Start recording</span></button>
+          <button class="button secondary" id="upload" type="button"><i class="ph ph-upload-simple" aria-hidden="true"></i> Upload audio</button>
+          <input id="file" type="file" accept="audio/*,.mp3,.m4a,.wav,.webm,.ogg,.opus,.aac,.flac,.mp4" hidden>
+        </div>
+        <p class="panel-note" id="upload-note">MP3, M4A, WAV, WebM, OGG · 15 min / 60 MB max</p>
+        <p class="panel-note error" id="recorder-error" role="alert" hidden></p>
+      </section>
+
+      <section class="panel studio-panel transcript-panel" id="transcript-panel" aria-labelledby="transcript-title">
+        <div class="panel-heading">
+          <span class="heading-icon"><i class="ph ph-text-align-left" aria-hidden="true"></i></span>
+          <div>
+            <h2 id="transcript-title">Transcript</h2>
+            <p>Fillers, pauses, and repeated words.</p>
+          </div>
+          <button class="button icon-button edit-button" id="edit-open" type="button" title="Edit transcript" aria-label="Edit transcript" hidden><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+        </div>
+
+        <div class="transcript-surface" id="transcript-surface" data-mode="empty">
+          <div class="empty-state" id="transcript-empty">
+            <span class="empty-icon"><i class="ph ph-list-dashes" aria-hidden="true"></i></span>
+            <h3>Your transcript goes here</h3>
+            <p>Record or upload audio to get started.</p>
+            <button class="sample-link" id="sample" type="button"><i class="ph ph-play" aria-hidden="true"></i> Try a sample recording</button>
+          </div>
+          <div class="empty-state" id="transcript-status" aria-live="polite" hidden>
+            <span class="empty-icon" id="status-icon"><i class="ph ph-circle-notch" aria-hidden="true"></i></span>
+            <h3 id="status-title">Transcribing your audio…</h3>
+            <p id="status-description">Whisper is listening on this device.</p>
+            <button class="sample-link" id="retry" type="button" hidden><i class="ph ph-arrow-clockwise" aria-hidden="true"></i> Retry transcription</button>
+          </div>
+          <div class="transcript-content" id="transcript-content" hidden></div>
+        </div>
+
+        <div class="legend" aria-label="Transcript annotations">
+          <span class="legend-item"><span class="marker filler">um</span> Filler</span>
+          <span class="legend-item"><span class="marker pause"><i class="ph ph-pause" aria-hidden="true"></i> 0.8s</span> Pause</span>
+          <span class="legend-item"><span class="marker repeat">I, I</span> Repetition</span>
+        </div>
+
+        <div class="transcript-actions">
+          <button class="button secondary" id="copy-text" type="button" disabled><i class="ph ph-copy" aria-hidden="true"></i><span>Copy text</span></button>
+          <button class="button secondary" id="download-text" type="button" disabled><i class="ph ph-download-simple" aria-hidden="true"></i> Download .txt</button>
+        </div>
+      </section>
+
+      <section class="panel follow-up" aria-labelledby="practice-title">
+        <div class="panel-heading">
+          <span class="heading-icon"><i class="ph ph-book-open" aria-hidden="true"></i></span>
+          <div><h2 id="practice-title">Practice prompt</h2><p>Pick a part of the IELTS speaking test.</p></div>
+          <label class="part-select"><span class="sr-only">IELTS speaking test part</span><select id="part"><option value="1">Part 1</option><option value="2">Part 2</option><option value="3">Part 3</option></select><i class="ph ph-caret-down" aria-hidden="true"></i></label>
+        </div>
+        <blockquote class="practice-prompt" id="prompt" aria-live="polite"></blockquote>
+        <button class="button text-button" id="next-prompt" type="button"><i class="ph ph-shuffle" aria-hidden="true"></i> New prompt</button>
+      </section>
+
+      <section class="panel follow-up share-panel" aria-labelledby="share-title">
+        <div class="panel-heading">
+          <span class="heading-icon"><i class="ph ph-chat-circle-text" aria-hidden="true"></i></span>
+          <div><h2 id="share-title">Get IELTS feedback</h2><p>Copy your transcript and a feedback request, then paste them into ChatGPT.</p></div>
+        </div>
+        <div class="share-actions">
+          <button class="button secondary" id="copy-feedback" type="button" disabled><i class="ph ph-copy" aria-hidden="true"></i><span>Copy for ChatGPT</span></button>
+          <a class="button text-button" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">Open ChatGPT <i class="ph ph-arrow-square-out" aria-hidden="true"></i></a>
+        </div>
+      </section>
+    </div>
+
+    <footer class="page-footer"><i class="ph ph-headphones" aria-hidden="true"></i> Listen back to check any words or hesitations Whisper may have missed.</footer>
+    <p class="sr-only" id="announcement" role="status" aria-live="polite"></p>
+  </main>
+
+  <dialog id="help-dialog" aria-labelledby="help-title">
+    <div class="dialog-heading"><h2 id="help-title">How Sayback works</h2><form method="dialog"><button class="button icon-button" aria-label="Close help"><i class="ph ph-x" aria-hidden="true"></i></button></form></div>
+    <ol class="help-steps">
+      <li><strong>Record or upload.</strong> Allow microphone access to record an answer or choose an existing voice message.</li>
+      <li><strong>Review what you said.</strong> Whisper looks for fillers and repetitions. Sayback marks estimated gaps in speech from about half a second. Select a timestamp or highlighted word to hear that moment, and edit any missed hesitations.</li>
+      <li><strong>Share it with ChatGPT.</strong> Use Copy for ChatGPT, or upload the downloaded text file and ask for IELTS Speaking feedback. Keep the audio for pronunciation and intonation review.</li>
+    </ol>
+    <p class="dialog-note"><i class="ph ph-lock-key" aria-hidden="true"></i> Recordings stay on this device until you share them. Download any work you want to keep before closing the page.</p>
+  </dialog>
+
+  <dialog id="edit-dialog" aria-labelledby="edit-title">
+    <form id="edit-form">
+      <div class="dialog-heading"><h2 id="edit-title">Edit transcript</h2><button class="button icon-button" id="edit-close" type="button" aria-label="Close editor"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+      <label class="edit-label" for="edit-text">Add any missed fillers or false starts, or correct the wording.</label>
+      <textarea id="edit-text" rows="10" required spellcheck="false"></textarea>
+      <div class="dialog-actions"><button class="button text-button" id="edit-reset" type="button"><i class="ph ph-arrow-clockwise" aria-hidden="true"></i> Restore Whisper text</button><button class="button primary" type="submit"><i class="ph ph-check" aria-hidden="true"></i> Save edits</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
